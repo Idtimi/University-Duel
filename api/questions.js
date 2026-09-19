@@ -10,13 +10,18 @@ export default async function handler(req, res) {
     try {
         const { data, error } = await supabase.from('questions').select('*');
         if (error) throw error;
-
+        
         const formattedData = data.map(q => ({
             ...q,
             options: q.options ? q.options.split('|') : []
         }));
         res.status(200).json(formattedData);
     } catch (error) {
-        res.status(500).json({ error: 'Failed to fetch questions' });
+        // This will now print the exact database error to your screen
+        res.status(500).json({ 
+            error: 'Failed to fetch questions', 
+            exact_reason: error.message || error,
+            hint: error.hint || "No hint provided"
+        });
     }
 }
