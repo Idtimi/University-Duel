@@ -157,7 +157,6 @@
             <!-- Question Area -->
             <div class="bg-slate-900/90 rounded-2xl p-6 my-4 border border-slate-800 min-h-[160px] flex flex-col justify-center text-center">
                 <h3 id="currentQuestionText" class="text-xl md:text-2xl font-semibold text-white">Loading...</h3>
-                <!-- Answer Reveal removed for Judge Mode to protect screen sharing -->
             </div>
 
             <!-- Interaction Area: Solo -->
@@ -188,17 +187,32 @@
         </div>
 
         <!-- RESULTS SCREEN -->
-        <div id="resultsScreen" class="hidden studio-card rounded-2xl p-8 text-center fade-in">
-            <h2 class="text-3xl font-extrabold text-white mb-6">Round Concluded</h2>
-            <div id="soloResultsBlock">
-                <div class="text-5xl font-black text-yellow-400 mb-2" id="finalScoreText">0</div>
-                <div class="text-slate-400 text-sm mb-6">Total Points</div>
+        <div id="resultsScreen" class="hidden studio-card rounded-2xl p-6 md:p-8 fade-in">
+            <h2 class="text-3xl font-extrabold text-white mb-2 text-center">Round Concluded</h2>
+            
+            <div id="soloResultsBlock" class="text-center mb-6">
+                <div class="text-5xl font-black text-yellow-400 mb-1" id="finalScoreText">0</div>
+                <div class="text-slate-400 text-sm">Total Points</div>
             </div>
-            <div id="judgeResultsBlock" class="hidden flex justify-center gap-12 mb-8">
-                <div><div class="text-lg text-slate-400 font-bold uppercase tracking-wider">Player 1</div><div id="finalP1Score" class="text-5xl font-black text-cyan-400 mt-2">0</div></div>
-                <div><div class="text-lg text-slate-400 font-bold uppercase tracking-wider">Player 2</div><div id="finalP2Score" class="text-5xl font-black text-emerald-400 mt-2">0</div></div>
+            <div id="judgeResultsBlock" class="hidden flex justify-center gap-12 mb-6">
+                <div class="text-center"><div class="text-sm text-slate-400 font-bold uppercase tracking-wider">Player 1</div><div id="finalP1Score" class="text-5xl font-black text-cyan-400 mt-1">0</div></div>
+                <div class="text-center"><div class="text-sm text-slate-400 font-bold uppercase tracking-wider">Player 2</div><div id="finalP2Score" class="text-5xl font-black text-emerald-400 mt-1">0</div></div>
             </div>
-            <button onclick="showScreen('homeScreen')" class="bg-slate-800 border border-slate-700 text-white font-semibold px-6 py-3 rounded-xl hover:bg-slate-700 transition">Back to Lobby</button>
+
+            <!-- Match Performance Review Section -->
+            <div class="mb-6">
+                <h3 class="text-lg font-bold text-cyan-400 mb-3 border-b border-slate-800 pb-2 flex items-center justify-between">
+                    <span><i class="fas fa-clipboard-list mr-2"></i> Match Performance Review</span>
+                    <span class="text-xs text-slate-400 font-normal">All questions encountered</span>
+                </h3>
+                <div id="reviewQuestionsList" class="space-y-3 max-h-[40vh] overflow-y-auto pr-2 text-left">
+                    <!-- Dynamically populated review cards -->
+                </div>
+            </div>
+
+            <div class="text-center">
+                <button onclick="showScreen('homeScreen')" class="bg-slate-800 border border-slate-700 text-white font-semibold px-8 py-3 rounded-xl hover:bg-slate-700 transition">Back to Lobby</button>
+            </div>
         </div>
     </div>
 
@@ -212,6 +226,9 @@
         let qPhase = 'read', qTimeLimit = 8, qTimeLeft = 8, qTimerInterval = null;
         let activeRound = '', activeCategory = '', isJudgeMode = false, isBuzzed = false;
 
+        // Track every question answered during a match for the review screen
+        let matchHistory = [];
+
         // Fetch questions from Backend API
         async function fetchLiveQuestions() {
             try {
@@ -224,7 +241,6 @@
             } catch (error) {
                 console.error("Failed to load live questions:", error);
                 
-                // Fallback test data in case the fetch fails or isn't hosted yet
                 allQuestions = [
                     { round: "QuickBuzz", category: "STEM", q: "A 2M solution is diluted from 250mL to 1L. What is the new concentration?", a: "0.5M" },
                     { round: "QuickBuzz", category: "General", q: "Which Malian singer is known as the Golden Voice of Africa?", a: "Salif Keita" },
@@ -328,6 +344,7 @@
 
         function setupArenaUI() {
             score = 0; p1Score = 0; p2Score = 0; p1Streak = 0; p2Streak = 0; currentTurn = 1; currentIndex = 0;
+            matchHistory = []; // Reset match history for new session
             
             document.getElementById('activeRoundBadge').textContent = activeRound;
             document.getElementById('soloScoreArea').style.display = isJudgeMode ? 'none' : 'block';
@@ -387,19 +404,24 @@
                 updateTimerBarUI();
                 if (qTimeLeft <= 0) {
                     clearInterval(qTimerInterval);
+                    const currentQ = currentPool[currentIndex];
                     if (qPhase === 'read') {
-                        flashFeedback(false, `Time Expired! (Ans: ${currentPool[currentIndex].a})`);
+                        matchHistory.push({ q: currentQ.q, correctAnswer: currentQ.a, userAnswer: "No Buzz / Expired", correct: false });
+                        flashFeedback(false, `Time Expired! (Ans: ${currentQ.a})`);
                         setTimeout(() => { currentIndex++; loadNextQuestion(); }, 1500);
                     } else if (qPhase === 'answer') {
                         score -= 10; document.getElementById('scoreDisplay').textContent = score;
-                        flashFeedback(false, `-10 Penalty! Time Expired (Ans: ${currentPool[currentIndex].a})`);
+                        matchHistory.push({ q: currentQ.q, correctAnswer: currentQ.a, userAnswer: "Time Expired", correct: false });
+                        flashFeedback(false, `-10 Penalty! Time Expired (Ans: ${currentQ.a})`);
                         setTimeout(() => { currentIndex++; loadNextQuestion(); }, 1500);
                     } else if (qPhase === 'brainmatch_run') {
                         if (isJudgeMode) {
+                            matchHistory.push({ q: currentQ.q, correctAnswer: currentQ.a, userAnswer: `Player ${currentTurn} Timed Out`, correct: false });
                             flashFeedback(false, `Time's Up! Turn Passed.`);
                             scoreJudgeMode(false, true); 
                         } else {
-                            flashFeedback(false, `Time's Up! (Ans: ${currentPool[currentIndex].a})`);
+                            matchHistory.push({ q: currentQ.q, correctAnswer: currentQ.a, userAnswer: "Time Expired", correct: false });
+                            flashFeedback(false, `Time's Up! (Ans: ${currentQ.a})`);
                             setTimeout(() => { currentIndex++; loadNextQuestion(); }, 1500);
                         }
                     }
@@ -455,9 +477,18 @@
             if(!userAns) return; 
             
             clearInterval(qTimerInterval);
-            const correctAns = currentPool[currentIndex].a;
+            const currentQ = currentPool[currentIndex];
+            const correctAns = currentQ.a;
+            const isCorrect = isCloseEnough(userAns, correctAns);
             
-            if (isCloseEnough(userAns, correctAns)) {
+            matchHistory.push({
+                q: currentQ.q,
+                correctAnswer: correctAns,
+                userAnswer: userAns,
+                correct: isCorrect
+            });
+
+            if (isCorrect) {
                 score += 10; flashFeedback(true, `Correct! +10 Points`);
             } else {
                 if (activeRound === 'QuickBuzz') {
@@ -481,6 +512,15 @@
 
         function scoreJudgeMode(isCorrect, isTimeout = false) {
             clearInterval(qTimerInterval);
+            const currentQ = currentPool[currentIndex];
+
+            matchHistory.push({
+                q: currentQ.q,
+                correctAnswer: currentQ.a,
+                userAnswer: `Player ${currentTurn} Answer (${isCorrect ? 'Correct' : 'Incorrect'})`,
+                correct: isCorrect
+            });
+
             if (isCorrect) {
                 if (currentTurn === 1) { p1Streak++; p1Score += getStreakPoints(p1Streak); } 
                 else { p2Streak++; p2Score += getStreakPoints(p2Streak); }
@@ -513,11 +553,43 @@
             document.getElementById('currentQuestionText').innerHTML = `<span class="${isGood ? 'text-emerald-400' : 'text-rose-400'} font-bold">${msg}</span>`;
         }
 
+        function populateReviewScreen() {
+            const listContainer = document.getElementById('reviewQuestionsList');
+            listContainer.innerHTML = '';
+
+            if (matchHistory.length === 0) {
+                listContainer.innerHTML = `<p class="text-slate-400 text-sm text-center py-4">No questions were answered during this match.</p>`;
+                return;
+            }
+
+            matchHistory.forEach((item, index) => {
+                const card = document.createElement('div');
+                card.className = `p-4 rounded-xl border ${item.correct ? 'bg-green-950/30 border-green-500/40' : 'bg-red-950/35 border-red-500/40'}`;
+                
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-1.5">
+                        <span class="text-[10px] font-extrabold px-2.5 py-0.5 rounded uppercase tracking-wider ${item.correct ? 'bg-green-500 text-slate-950' : 'bg-red-500 text-white'}">
+                            ${item.correct ? 'Got It' : 'Missed'}
+                        </span>
+                        <span class="text-slate-400 text-xs font-mono">Q${index + 1}</span>
+                    </div>
+                    <p class="text-white text-sm font-medium mb-2">${item.q}</p>
+                    <div class="text-xs grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-slate-800/80">
+                        <div><span class="text-slate-400">Your Input:</span> <span class="${item.correct ? 'text-green-400' : 'text-red-400'} font-semibold">${item.userAnswer}</span></div>
+                        <div><span class="text-slate-400">Correct Answer:</span> <span class="text-yellow-400 font-semibold">${item.correctAnswer}</span></div>
+                    </div>
+                `;
+                listContainer.appendChild(card);
+            });
+        }
+
         function endRound() {
             clearInterval(globalTimerInterval); clearInterval(qTimerInterval);
             if(recognition && isMicListening) { isMicListening = false; recognition.stop(); }
             
             showScreen('resultsScreen');
+            populateReviewScreen();
+
             if (isJudgeMode) {
                 document.getElementById('soloResultsBlock').style.display = 'none';
                 document.getElementById('judgeResultsBlock').style.display = 'flex';
