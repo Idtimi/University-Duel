@@ -11,17 +11,22 @@ export default async function handler(req, res) {
         const { data, error } = await supabase.from('questions').select('*');
         if (error) throw error;
         
-        const formattedData = data.map(q => ({
-            ...q,
-            options: q.options ? q.options.split('|') : []
+        // This forces whatever the database returns into the exact format your frontend needs
+        const formattedData = data.map(row => ({
+            round: row.round || row.Round || "",
+            category: row.category || row.Category || "",
+            q: row.q || row.question || row.Question || "",
+            a: row.a || row.answer || row.Answer || "",
+            options: row.options || row.Options ? (row.options || row.Options) : []
         }));
+        
+        // Force Vercel to bypass cache so you see this update instantly
+        res.setHeader('Cache-Control', 'no-store, max-age=0');
         res.status(200).json(formattedData);
     } catch (error) {
-        // This will now print the exact database error to your screen
         res.status(500).json({ 
             error: 'Failed to fetch questions', 
-            exact_reason: error.message || error,
-            hint: error.hint || "No hint provided"
+            exact_reason: error.message || error
         });
     }
 }
