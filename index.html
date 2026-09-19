@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>University Duel: Pro Simulator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
+        
+        * { box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+        body { background: radial-gradient(circle at center, #0f1c3f 0%, #060b18 100%); min-height: 100vh; color: #f1f5f9; }
+        
+        .studio-card {
+            background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(16px);
+            border: 1px solid rgba(56, 189, 248, 0.25); box-shadow: 0 0 30px rgba(14, 165, 233, 0.15);
+        }
+        .fade-in { animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .buzzer-btn {
+            background: radial-gradient(circle at 30% 30%, #ef4444, #991b1b);
+            box-shadow: 0 8px 0 #7f1d1d, 0 12px 25px rgba(239, 68, 68, 0.5); transition: all 0.08s ease;
+        }
+        .buzzer-btn:active { transform: translateY(6px); box-shadow: 0 2px 0 #7f1d1d, 0 6px 12px rgba(239, 68, 68, 0.4); }
+        
+        .mic-active { animation: pulse-red 1.5s infinite; color: #ef4444 !important; border-color: #ef4444 !important; }
+        @keyframes pulse-red { 0% { box-shadow: 0 0 0 rgba(239, 68, 68, 0.7); } 70% { box-shadow: 0 0 15px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 rgba(239, 68, 68, 0); } }
+
+        .active-turn-p1 { border: 2px solid #22d3ee !important; background: rgba(34, 211, 238, 0.1); box-shadow: 0 0 20px rgba(34, 211, 238, 0.3); }
+        .active-turn-p2 { border: 2px solid #34d399 !important; background: rgba(52, 211, 153, 0.1); box-shadow: 0 0 20px rgba(52, 211, 153, 0.3); }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center p-3 md:p-6 min-h-screen">
+
+    <div id="app" class="w-full max-w-5xl">
+        <!-- Header -->
+        <header class="flex justify-between items-center bg-slate-900/90 border border-cyan-500/30 rounded-2xl px-6 py-4 mb-5 shadow-lg">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-yellow-500 to-amber-300 flex items-center justify-center text-slate-950 font-black text-xl shadow-md">UD</div>
+                <div>
+                    <h1 class="text-xl font-extrabold tracking-wider uppercase text-yellow-400">University Duel</h1>
+                    <p class="text-xs text-cyan-300 tracking-widest uppercase">Pro Training Engine</p>
+                </div>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="showScreen('homeScreen')" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 border border-slate-700"><i class="fas fa-home mr-1"></i> Lobby</button>
+            </div>
+        </header>
+
+        <!-- LOBBY SCREEN -->
+        <div id="homeScreen" class="studio-card rounded-2xl p-6 md:p-8 fade-in">
+            <div class="text-center mb-8">
+                <h2 class="text-3xl font-extrabold text-white tracking-tight">Select Training Mode</h2>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-4 mb-8">
+                <div onclick="startQuickBuzz()" class="cursor-pointer rounded-2xl p-5 bg-slate-900/70 border-2 border-slate-800 hover:border-yellow-500 hover:bg-yellow-500/5 transition">
+                    <span class="text-xs font-bold text-yellow-400 uppercase tracking-wider block mb-2"><i class="fas fa-bolt"></i> Round 1</span>
+                    <h3 class="text-xl font-bold text-white mb-2">QuickBuzz Arena</h3>
+                    <p class="text-xs text-slate-400">8s question timer. 5s buzzer lockout window. Voice enabled.</p>
+                </div>
+
+                <div onclick="openBrainMatchCategorySelect(false)" class="cursor-pointer rounded-2xl p-5 bg-slate-900/70 border-2 border-slate-800 hover:border-cyan-400 hover:bg-cyan-500/5 transition">
+                    <span class="text-xs font-bold text-cyan-400 uppercase tracking-wider block mb-2"><i class="fas fa-brain"></i> Round 2</span>
+                    <h3 class="text-xl font-bold text-white mb-2">BrainMatch Solo</h3>
+                    <p class="text-xs text-slate-400">90s sprint. 7s per question. Continuous flow with auto-marking.</p>
+                </div>
+
+                <div onclick="openBrainMatchCategorySelect(true)" class="cursor-pointer rounded-2xl p-5 bg-slate-900/70 border-2 border-slate-800 hover:border-emerald-400 hover:bg-emerald-500/5 transition">
+                    <span class="text-xs font-bold text-emerald-400 uppercase tracking-wider block mb-2"><i class="fas fa-gavel"></i> 2-Player</span>
+                    <h3 class="text-xl font-bold text-white mb-2">Judge Mode</h3>
+                    <p class="text-xs text-slate-400">Screen-share safe. Answers hidden. Turn-based streak scoring with 7s auto-pass.</p>
+                </div>
+            </div>
+            
+            <div class="bg-slate-950/60 rounded-xl p-4 border border-slate-800 flex justify-center text-xs text-slate-400">
+                <span id="uploadStatus">Initializing database connection...</span>
+            </div>
+        </div>
+
+        <!-- CATEGORY SELECT SCREEN -->
+        <div id="brainMatchCategoryScreen" class="hidden studio-card rounded-2xl p-6 md:p-8 fade-in">
+            <div class="text-center mb-8"><h2 class="text-3xl font-extrabold text-white">Select Discipline</h2></div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+                <button onclick="handleCategorySelect('Applied Math')" class="p-5 rounded-xl bg-slate-900/80 border border-slate-700 hover:border-amber-400 text-left transition"><div class="text-amber-400 font-bold mb-1">Applied Math</div></button>
+                <button onclick="handleCategorySelect('Data Analysis')" class="p-5 rounded-xl bg-slate-900/80 border border-slate-700 hover:border-blue-400 text-left transition"><div class="text-blue-400 font-bold mb-1">Data Analysis</div></button>
+                <button onclick="handleCategorySelect('Verbal Reasoning')" class="p-5 rounded-xl bg-slate-900/80 border border-slate-700 hover:border-emerald-400 text-left transition"><div class="text-emerald-400 font-bold mb-1">Verbal Reasoning</div></button>
+                <button onclick="handleCategorySelect('General Knowledge')" class="p-5 rounded-xl bg-slate-900/80 border border-slate-700 hover:border-purple-400 text-left transition"><div class="text-purple-400 font-bold mb-1">General Knowledge</div></button>
+            </div>
+        </div>
+
+        <!-- JUDGE PREVIEW SCREEN -->
+        <div id="judgePreviewScreen" class="hidden studio-card rounded-2xl p-6 md:p-8 fade-in">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h2 class="text-2xl font-extrabold text-white">Host Cheat Sheet</h2>
+                    <p class="text-xs text-rose-400 font-bold">Screenshot this now! Answers will NOT be shown during the live match.</p>
+                </div>
+                <button onclick="startBrainMatchMode()" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-8 py-3 rounded-xl transition">
+                    <i class="fas fa-play mr-2"></i> Start Live Duel
+                </button>
+            </div>
+            <div class="max-h-96 overflow-y-auto bg-slate-950 border border-slate-700 rounded-xl">
+                <table class="w-full text-left text-sm text-slate-300">
+                    <thead class="bg-slate-900 sticky top-0 text-cyan-400 text-xs uppercase">
+                        <tr><th class="p-4 w-2/3">Question</th><th class="p-4 w-1/3">Answer</th></tr>
+                    </thead>
+                    <tbody id="judgePreviewTableBody" class="divide-y divide-slate-800">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- GAMEPLAY ARENA -->
+        <div id="gameScreen" class="hidden studio-card rounded-2xl p-6 md:p-8 fade-in">
+            <!-- Global Header -->
+            <div class="flex flex-wrap justify-between items-center pb-4 border-b border-slate-800 gap-4">
+                <span id="activeRoundBadge" class="px-3 py-1 rounded-full text-xs font-bold uppercase bg-yellow-500/20 text-yellow-400">QuickBuzz</span>
+                <div class="flex items-center gap-2 bg-slate-950 px-4 py-2 rounded-xl border border-slate-800">
+                    <i class="fas fa-clock text-amber-400 text-sm"></i> <span id="globalTimerDisplay" class="text-lg font-black text-white font-mono">120s</span>
+                </div>
+                <!-- Solo Score -->
+                <div id="soloScoreArea" class="text-right">
+                    <div class="text-[10px] uppercase font-bold text-slate-400">Total Score</div>
+                    <div id="scoreDisplay" class="text-2xl font-black text-yellow-400">0</div>
+                </div>
+            </div>
+
+            <!-- Judge Mode Scoreboard -->
+            <div id="judgeScoreboard" class="hidden grid grid-cols-2 gap-4 mt-6">
+                <div id="p1Panel" class="p-4 rounded-xl border border-slate-700 text-center transition-all duration-300">
+                    <div class="text-xs uppercase font-bold text-slate-400 tracking-wider">Player 1</div>
+                    <div id="p1Score" class="text-4xl font-black text-cyan-400 my-1">0</div>
+                    <div class="text-[10px] text-cyan-500 font-mono">Streak: <span id="p1StreakText">0</span></div>
+                </div>
+                <div id="p2Panel" class="p-4 rounded-xl border border-slate-700 text-center transition-all duration-300">
+                    <div class="text-xs uppercase font-bold text-slate-400 tracking-wider">Player 2</div>
+                    <div id="p2Score" class="text-4xl font-black text-emerald-400 my-1">0</div>
+                    <div class="text-[10px] text-emerald-500 font-mono">Streak: <span id="p2StreakText">0</span></div>
+                </div>
+            </div>
+
+            <!-- Active Timer UI -->
+            <div id="activeTimerContainer" class="my-4">
+                <div class="flex justify-between text-xs font-bold mb-1 uppercase tracking-widest text-slate-400">
+                    <span id="qTimerLabel">Question Time</span>
+                    <span id="qTimerText" class="font-mono text-cyan-300">8.0s</span>
+                </div>
+                <div class="w-full bg-slate-950 rounded-full h-3 overflow-hidden border border-slate-800">
+                    <div id="qTimerBar" class="bg-cyan-400 h-full w-full transition-all duration-100"></div>
+                </div>
+            </div>
+
+            <!-- Question Area -->
+            <div class="bg-slate-900/90 rounded-2xl p-6 my-4 border border-slate-800 min-h-[160px] flex flex-col justify-center text-center">
+                <h3 id="currentQuestionText" class="text-xl md:text-2xl font-semibold text-white">Loading...</h3>
+                <!-- Answer Reveal removed for Judge Mode to protect screen sharing -->
+            </div>
+
+            <!-- Interaction Area: Solo -->
+            <div id="soloInputArea" class="my-6 text-center">
+                <div id="preBuzzSection">
+                    <button onclick="triggerBuzz()" class="buzzer-btn text-white font-black text-xl px-12 py-6 rounded-2xl uppercase shadow-lg"><i class="fas fa-hand-pointer"></i> Buzz In (Space)</button>
+                </div>
+                <div id="answerSection" class="hidden">
+                    <div class="flex flex-col sm:flex-row gap-3 justify-center max-w-lg mx-auto">
+                        <button onclick="toggleContinuousMic()" id="micBtn" class="bg-slate-800 border-2 border-slate-700 text-slate-300 px-5 py-3 rounded-xl transition" title="Browser Voice Dictation (Desktop Only)">
+                            <i class="fas fa-microphone text-xl"></i>
+                        </button>
+                        <input type="text" id="answerInput" placeholder="Type answer or use keyboard mic..." class="flex-1 bg-slate-950 border-2 border-yellow-500 text-white text-lg rounded-xl px-4 py-3 outline-none">
+                        <button onclick="submitSoloAnswer()" class="bg-yellow-500 text-slate-950 font-bold px-8 rounded-xl hover:bg-yellow-400">Submit</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Interaction Area: Judge -->
+            <div id="judgeControlsArea" class="hidden my-6 flex justify-center gap-4">
+                <button onclick="scoreJudgeMode(true)" class="bg-emerald-600 hover:bg-emerald-500 text-white font-black text-lg px-8 py-5 rounded-2xl transition shadow-lg shadow-emerald-900/50">
+                    <i class="fas fa-check-circle mr-2"></i> Correct
+                </button>
+                <button onclick="scoreJudgeMode(false)" class="bg-rose-600 hover:bg-rose-500 text-white font-black text-lg px-8 py-5 rounded-2xl transition shadow-lg shadow-rose-900/50">
+                    <i class="fas fa-times-circle mr-2"></i> Wrong / Pass
+                </button>
+            </div>
+        </div>
+
+        <!-- RESULTS SCREEN -->
+        <div id="resultsScreen" class="hidden studio-card rounded-2xl p-8 text-center fade-in">
+            <h2 class="text-3xl font-extrabold text-white mb-6">Round Concluded</h2>
+            <div id="soloResultsBlock">
+                <div class="text-5xl font-black text-yellow-400 mb-2" id="finalScoreText">0</div>
+                <div class="text-slate-400 text-sm mb-6">Total Points</div>
+            </div>
+            <div id="judgeResultsBlock" class="hidden flex justify-center gap-12 mb-8">
+                <div><div class="text-lg text-slate-400 font-bold uppercase tracking-wider">Player 1</div><div id="finalP1Score" class="text-5xl font-black text-cyan-400 mt-2">0</div></div>
+                <div><div class="text-lg text-slate-400 font-bold uppercase tracking-wider">Player 2</div><div id="finalP2Score" class="text-5xl font-black text-emerald-400 mt-2">0</div></div>
+            </div>
+            <button onclick="showScreen('homeScreen')" class="bg-slate-800 border border-slate-700 text-white font-semibold px-6 py-3 rounded-xl hover:bg-slate-700 transition">Back to Lobby</button>
+        </div>
+    </div>
+
+    <script>
+        let allQuestions = [];
+        let currentPool = [], currentIndex = 0;
+        let score = 0, p1Score = 0, p2Score = 0;
+        let p1Streak = 0, p2Streak = 0, currentTurn = 1;
+        
+        let globalTime = 120, globalTimerInterval = null;
+        let qPhase = 'read', qTimeLimit = 8, qTimeLeft = 8, qTimerInterval = null;
+        let activeRound = '', activeCategory = '', isJudgeMode = false, isBuzzed = false;
+
+        // Fetch questions from Backend API
+        async function fetchLiveQuestions() {
+            try {
+                document.getElementById('uploadStatus').textContent = "Connecting to live database...";
+                const response = await fetch('/api/questions');
+                if (!response.ok) throw new Error('Network response was not ok');
+                
+                allQuestions = await response.json();
+                document.getElementById('uploadStatus').innerHTML = `<span class="text-emerald-400 font-bold"><i class="fas fa-check-circle"></i> Live database connected! Loaded <strong id="loadedQCount" class="text-white">${allQuestions.length}</strong> questions.</span>`;
+            } catch (error) {
+                console.error("Failed to load live questions:", error);
+                
+                // Fallback test data in case the fetch fails or isn't hosted yet
+                allQuestions = [
+                    { round: "QuickBuzz", category: "STEM", q: "A 2M solution is diluted from 250mL to 1L. What is the new concentration?", a: "0.5M" },
+                    { round: "QuickBuzz", category: "General", q: "Which Malian singer is known as the Golden Voice of Africa?", a: "Salif Keita" },
+                    { round: "BrainMatch", category: "Applied Math", q: "A spring-mass system follows d²x/dt² + 9x = 0. What is the period?", a: "2.09s" },
+                    { round: "BrainMatch", category: "Data Analysis", q: "What is the probability of rolling a 4 on a standard die?", a: "1/6" }
+                ];
+                document.getElementById('uploadStatus').innerHTML = `<span class="text-rose-400 font-bold"><i class="fas fa-exclamation-triangle"></i> Database connection failed. Loaded fallback questions.</span>`;
+                document.getElementById('loadedQCount').textContent = allQuestions.length;
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', fetchLiveQuestions);
+
+        // SPEECH RECOGNITION (Continuous Mode)
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition = null;
+        let isMicListening = false;
+
+        if (SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            recognition.continuous = true; 
+            recognition.interimResults = false; 
+            recognition.lang = 'en-NG';
+            
+            recognition.onresult = (e) => {
+                const transcript = e.results[e.results.length - 1][0].transcript.trim();
+                const inputEl = document.getElementById('answerInput');
+                if (inputEl) inputEl.value = transcript;
+                
+                if (!isJudgeMode && document.getElementById('answerSection').classList.contains('hidden') === false) {
+                    submitSoloAnswer();
+                }
+            };
+            
+            recognition.onend = () => {
+                if (isMicListening) { try { recognition.start(); } catch(err) {} } 
+                else { document.getElementById('micBtn').classList.remove('mic-active'); }
+            };
+        }
+
+        function toggleContinuousMic() {
+            if (!recognition) {
+                alert("Browser Voice API isn't supported here. Please tap the text box and use your phone keyboard's built-in microphone icon instead!");
+                return;
+            }
+            const micBtn = document.getElementById('micBtn');
+            if (isMicListening) {
+                isMicListening = false;
+                recognition.stop();
+                micBtn.classList.remove('mic-active');
+            } else {
+                isMicListening = true;
+                recognition.start();
+                micBtn.classList.add('mic-active');
+            }
+        }
+
+        function showScreen(id) {
+            clearInterval(globalTimerInterval); clearInterval(qTimerInterval);
+            if(recognition && isMicListening) { isMicListening = false; recognition.stop(); }
+            ['homeScreen', 'brainMatchCategoryScreen', 'judgePreviewScreen', 'gameScreen', 'resultsScreen'].forEach(s => document.getElementById(s).classList.add('hidden'));
+            document.getElementById(id).classList.remove('hidden');
+        }
+
+        function shuffleArray(arr) { return [...arr].sort(() => Math.random() - 0.5); }
+
+        function startQuickBuzz() {
+            if (allQuestions.length === 0) return alert("Database is still loading or failed to connect.");
+            activeRound = 'QuickBuzz'; isJudgeMode = false; globalTime = 120;
+            currentPool = shuffleArray(allQuestions.filter(q => q.round === 'QuickBuzz'));
+            if (!currentPool.length) currentPool = shuffleArray([...allQuestions]);
+            setupArenaUI();
+        }
+
+        let tempJudgeFlag = false;
+        function openBrainMatchCategorySelect(judgeFlag) {
+            if (allQuestions.length === 0) return alert("Database is still loading or failed to connect.");
+            tempJudgeFlag = judgeFlag;
+            showScreen('brainMatchCategoryScreen');
+        }
+
+        function handleCategorySelect(cat) {
+            activeRound = 'BrainMatch'; activeCategory = cat; isJudgeMode = tempJudgeFlag; globalTime = 90;
+            currentPool = shuffleArray(allQuestions.filter(q => q.round === 'BrainMatch' && q.category === cat));
+            if (!currentPool.length) currentPool = shuffleArray(allQuestions);
+            
+            if (isJudgeMode) showJudgePreview();
+            else setupArenaUI();
+        }
+
+        function showJudgePreview() {
+            const tbody = document.getElementById('judgePreviewTableBody');
+            tbody.innerHTML = '';
+            currentPool.forEach(q => {
+                tbody.innerHTML += `<tr><td class="p-4 border-b border-slate-800">${q.q}</td><td class="p-4 border-b border-slate-800 text-emerald-400 font-bold">${q.a}</td></tr>`;
+            });
+            showScreen('judgePreviewScreen');
+        }
+
+        function startBrainMatchMode() { setupArenaUI(); }
+
+        function setupArenaUI() {
+            score = 0; p1Score = 0; p2Score = 0; p1Streak = 0; p2Streak = 0; currentTurn = 1; currentIndex = 0;
+            
+            document.getElementById('activeRoundBadge').textContent = activeRound;
+            document.getElementById('soloScoreArea').style.display = isJudgeMode ? 'none' : 'block';
+            document.getElementById('judgeScoreboard').style.display = isJudgeMode ? 'grid' : 'none';
+            document.getElementById('soloInputArea').style.display = isJudgeMode ? 'none' : 'block';
+            document.getElementById('judgeControlsArea').style.display = isJudgeMode ? 'flex' : 'none';
+            
+            document.getElementById('scoreDisplay').textContent = score;
+            updateJudgeScoreboardUI();
+            
+            showScreen('gameScreen');
+            startGlobalTimer();
+            loadNextQuestion();
+        }
+
+        function startGlobalTimer() {
+            document.getElementById('globalTimerDisplay').textContent = `${globalTime}s`;
+            globalTimerInterval = setInterval(() => {
+                globalTime--;
+                document.getElementById('globalTimerDisplay').textContent = `${globalTime}s`;
+                if (globalTime <= 0) endRound();
+            }, 1000);
+        }
+
+        function loadNextQuestion() {
+            if (currentIndex >= currentPool.length) { currentPool = shuffleArray([...currentPool]); currentIndex = 0; }
+            const q = currentPool[currentIndex];
+            
+            document.getElementById('currentQuestionText').textContent = q.q;
+            document.getElementById('activeTimerContainer').style.display = 'block';
+
+            if (activeRound === 'QuickBuzz') {
+                qPhase = 'read'; qTimeLimit = 8; qTimeLeft = 8; isBuzzed = false;
+                document.getElementById('qTimerLabel').textContent = "Read Time";
+                document.getElementById('preBuzzSection').classList.remove('hidden');
+                document.getElementById('answerSection').classList.add('hidden');
+                document.getElementById('answerInput').value = '';
+            } else {
+                qPhase = 'brainmatch_run'; qTimeLimit = 7; qTimeLeft = 7;
+                document.getElementById('qTimerLabel').textContent = "Answer Window";
+
+                if (!isJudgeMode) {
+                    document.getElementById('preBuzzSection').classList.add('hidden');
+                    document.getElementById('answerSection').classList.remove('hidden');
+                    document.getElementById('answerInput').value = '';
+                    document.getElementById('answerInput').focus();
+                }
+            }
+            startQuestionInterval();
+        }
+
+        function startQuestionInterval() {
+            clearInterval(qTimerInterval);
+            updateTimerBarUI();
+            qTimerInterval = setInterval(() => {
+                qTimeLeft -= 0.1;
+                updateTimerBarUI();
+                if (qTimeLeft <= 0) {
+                    clearInterval(qTimerInterval);
+                    if (qPhase === 'read') {
+                        flashFeedback(false, `Time Expired! (Ans: ${currentPool[currentIndex].a})`);
+                        setTimeout(() => { currentIndex++; loadNextQuestion(); }, 1500);
+                    } else if (qPhase === 'answer') {
+                        score -= 10; document.getElementById('scoreDisplay').textContent = score;
+                        flashFeedback(false, `-10 Penalty! Time Expired (Ans: ${currentPool[currentIndex].a})`);
+                        setTimeout(() => { currentIndex++; loadNextQuestion(); }, 1500);
+                    } else if (qPhase === 'brainmatch_run') {
+                        if (isJudgeMode) {
+                            flashFeedback(false, `Time's Up! Turn Passed.`);
+                            scoreJudgeMode(false, true); 
+                        } else {
+                            flashFeedback(false, `Time's Up! (Ans: ${currentPool[currentIndex].a})`);
+                            setTimeout(() => { currentIndex++; loadNextQuestion(); }, 1500);
+                        }
+                    }
+                }
+            }, 100);
+        }
+
+        function updateTimerBarUI() {
+            const bar = document.getElementById('qTimerBar');
+            const pct = Math.max(0, (qTimeLeft/qTimeLimit)*100);
+            bar.style.width = `${pct}%`;
+            document.getElementById('qTimerText').textContent = `${Math.max(0, qTimeLeft).toFixed(1)}s`;
+            bar.className = pct < 30 ? "bg-rose-500 h-full w-full transition-all duration-100" : (qPhase === 'answer' ? "bg-yellow-400 h-full w-full transition-all duration-100" : "bg-cyan-400 h-full w-full transition-all duration-100");
+        }
+
+        function triggerBuzz() {
+            if (activeRound !== 'QuickBuzz' || isJudgeMode || isBuzzed || qPhase !== 'read') return;
+            isBuzzed = true; qPhase = 'answer'; qTimeLimit = 5; qTimeLeft = 5; 
+            document.getElementById('qTimerLabel').textContent = "Answer Window";
+            document.getElementById('preBuzzSection').classList.add('hidden');
+            document.getElementById('answerSection').classList.remove('hidden');
+            document.getElementById('answerInput').focus();
+            
+            clearInterval(qTimerInterval);
+            startQuestionInterval();
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && activeRound === 'QuickBuzz' && qPhase === 'read' && !isJudgeMode) {
+                e.preventDefault(); triggerBuzz();
+            } else if (e.code === 'Enter') {
+                if (activeRound === 'QuickBuzz' && qPhase === 'answer') submitSoloAnswer();
+                else if (activeRound === 'BrainMatch' && !isJudgeMode) submitSoloAnswer();
+            }
+        });
+
+        function isCloseEnough(userVal, correctVal) {
+            if(!userVal || !correctVal) return false;
+            let u = userVal.toString().toLowerCase().trim();
+            let c = correctVal.toString().toLowerCase().trim();
+            if (u === c) return true;
+            const uNumMatch = u.match(/-?\d+(\.\d+)?/);
+            const cNumMatch = c.match(/-?\d+(\.\d+)?/);
+            if (uNumMatch && cNumMatch) {
+                if (Math.abs(parseFloat(uNumMatch[0]) - parseFloat(cNumMatch[0])) <= Math.max(0.1, Math.abs(parseFloat(cNumMatch[0]) * 0.05))) return true;
+            }
+            if (u.length > 3 && c.includes(u)) return true;
+            return false;
+        }
+
+        function submitSoloAnswer() {
+            const userAns = document.getElementById('answerInput').value.trim();
+            if(!userAns) return; 
+            
+            clearInterval(qTimerInterval);
+            const correctAns = currentPool[currentIndex].a;
+            
+            if (isCloseEnough(userAns, correctAns)) {
+                score += 10; flashFeedback(true, `Correct! +10 Points`);
+            } else {
+                if (activeRound === 'QuickBuzz') {
+                    score -= 10; flashFeedback(false, `-10 Penalty (Ans: ${correctAns})`);
+                } else {
+                    flashFeedback(false, `Wrong. (Ans: ${correctAns})`);
+                }
+            }
+            
+            document.getElementById('scoreDisplay').textContent = score;
+            document.getElementById('answerInput').value = '';
+            setTimeout(() => { currentIndex++; if(globalTime > 0) loadNextQuestion(); }, 1200);
+        }
+
+        function getStreakPoints(streakLength) {
+            if (streakLength <= 2) return 2;
+            if (streakLength <= 5) return 3;
+            if (streakLength <= 9) return 4;
+            return 5;
+        }
+
+        function scoreJudgeMode(isCorrect, isTimeout = false) {
+            clearInterval(qTimerInterval);
+            if (isCorrect) {
+                if (currentTurn === 1) { p1Streak++; p1Score += getStreakPoints(p1Streak); } 
+                else { p2Streak++; p2Score += getStreakPoints(p2Streak); }
+                if(!isTimeout) flashFeedback(true, `Player ${currentTurn} Streak Continues!`);
+            } else {
+                if (currentTurn === 1) { p1Streak = 0; currentTurn = 2; } 
+                else { p2Streak = 0; currentTurn = 1; }
+                if(!isTimeout) flashFeedback(false, `Incorrect. Turn Passed!`);
+            }
+            updateJudgeScoreboardUI();
+            setTimeout(() => { currentIndex++; if(globalTime > 0) loadNextQuestion(); }, 1000);
+        }
+
+        function updateJudgeScoreboardUI() {
+            document.getElementById('p1Score').textContent = p1Score;
+            document.getElementById('p2Score').textContent = p2Score;
+            document.getElementById('p1StreakText').textContent = p1Streak;
+            document.getElementById('p2StreakText').textContent = p2Streak;
+            
+            if (currentTurn === 1) {
+                document.getElementById('p1Panel').classList.add('active-turn-p1'); 
+                document.getElementById('p2Panel').classList.remove('active-turn-p2');
+            } else {
+                document.getElementById('p2Panel').classList.add('active-turn-p2'); 
+                document.getElementById('p1Panel').classList.remove('active-turn-p1');
+            }
+        }
+
+        function flashFeedback(isGood, msg) {
+            document.getElementById('currentQuestionText').innerHTML = `<span class="${isGood ? 'text-emerald-400' : 'text-rose-400'} font-bold">${msg}</span>`;
+        }
+
+        function endRound() {
+            clearInterval(globalTimerInterval); clearInterval(qTimerInterval);
+            if(recognition && isMicListening) { isMicListening = false; recognition.stop(); }
+            
+            showScreen('resultsScreen');
+            if (isJudgeMode) {
+                document.getElementById('soloResultsBlock').style.display = 'none';
+                document.getElementById('judgeResultsBlock').style.display = 'flex';
+                document.getElementById('finalP1Score').textContent = p1Score;
+                document.getElementById('finalP2Score').textContent = p2Score;
+            } else {
+                document.getElementById('soloResultsBlock').style.display = 'block';
+                document.getElementById('judgeResultsBlock').style.display = 'none';
+                document.getElementById('finalScoreText').textContent = score;
+            }
+        }
+    </script>
+</body>
+</html>
