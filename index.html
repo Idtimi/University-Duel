@@ -557,10 +557,16 @@
         function startGlobalTimer() {
             clearInterval(globalTimerInterval);
             document.getElementById('globalTimerDisplay').textContent = `${globalTime}s`;
+            
             globalTimerInterval = setInterval(() => {
-                globalTime--;
-                document.getElementById('globalTimerDisplay').textContent = `${globalTime}s`;
-                if (globalTime <= 0) endRound();
+                if (globalTime > 0) {
+                    globalTime--;
+                    document.getElementById('globalTimerDisplay').textContent = `${globalTime}s`;
+                }
+                if (globalTime <= 0) {
+                    clearInterval(globalTimerInterval);
+                    endRound();
+                }
             }, 1000);
         }
 
