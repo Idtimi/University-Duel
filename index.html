@@ -266,7 +266,7 @@
         <!-- RESULTS SCREEN -->
         <div id="resultsScreen" class="hidden studio-card rounded-2xl p-6 md:p-8 fade-in">
             <h2 class="text-3xl font-extrabold text-white mb-2 text-center">Round Concluded</h2>
-            
+
             <div id="soloResultsBlock" class="text-center mb-6">
                 <div class="text-5xl font-black text-yellow-400 mb-1" id="finalScoreText">0</div>
                 <div class="text-slate-400 text-sm">Total Points</div>
@@ -303,11 +303,12 @@
         let currentPool = [], currentIndex = 0;
         let score = 0, p1Score = 0, p2Score = 0;
         let p1Streak = 0, p2Streak = 0, currentTurn = 1;
-        
+
         let globalTime = 120, globalTimerInterval = null;
         let qPhase = 'read', qTimeLimit = 8, qTimeLeft = 8, qTimerInterval = null;
         let activeRound = '', activeCategory = '', isJudgeMode = false, isBuzzed = false;
         let matchHistory = [];
+        let isProcessingAnswer = false;
 
         // Rapid Fire Custom Creator State
         let rfQuestions = [];
@@ -323,7 +324,7 @@
                 document.getElementById('uploadStatus').textContent = "Connecting to live database...";
                 const response = await fetch('/api/questions');
                 if (!response.ok) throw new Error('Network response was not ok');
-                
+
                 allQuestions = await response.json();
                 document.getElementById('uploadStatus').innerHTML = `<span class="text-emerald-400 font-bold"><i class="fas fa-check-circle"></i> Live database connected! Loaded <strong id="loadedQCount" class="text-white">${allQuestions.length}</strong> questions.</span>`;
             } catch (error) {
@@ -338,7 +339,7 @@
                 document.getElementById('loadedQCount').textContent = allQuestions.length;
             }
         }
-        
+
         document.addEventListener('DOMContentLoaded', () => {
             fetchLiveQuestions();
             setupRfUploadListener();
@@ -354,17 +355,17 @@
             recognition.continuous = true; 
             recognition.interimResults = false; 
             recognition.lang = 'en-NG';
-            
+
             recognition.onresult = (e) => {
                 const transcript = e.results[e.results.length - 1][0].transcript.trim();
                 const inputEl = document.getElementById('answerInput');
                 if (inputEl) inputEl.value = transcript;
-                
+
                 if (!isJudgeMode && document.getElementById('answerSection').classList.contains('hidden') === false) {
                     submitSoloAnswer();
                 }
             };
-            
+
             recognition.onend = () => {
                 if (isMicListening) { try { recognition.start(); } catch(err) {} } 
                 else { document.getElementById('micBtn').classList.remove('mic-active'); }
@@ -416,7 +417,7 @@
             activeRound = 'BrainMatch'; activeCategory = cat; isJudgeMode = tempJudgeFlag; isRapidFireActive = false; globalTime = 90;
             currentPool = shuffleArray(allQuestions.filter(q => q.round === 'BrainMatch' && q.category === cat));
             if (!currentPool.length) currentPool = shuffleArray(allQuestions);
-            
+
             if (isJudgeMode) showJudgePreview();
             else setupArenaUI();
         }
@@ -439,7 +440,7 @@
                 const file = e.target.files[0];
                 if (!file) return;
                 document.getElementById('rfFileName').textContent = `Selected: ${file.name}`;
-                
+
                 const reader = new FileReader();
                 reader.onload = function(event) {
                     parseRfCSV(event.target.result);
@@ -490,7 +491,7 @@
             document.getElementById('rfModeSetNum').querySelector('div').className = "text-white font-bold text-sm";
             document.getElementById('rfModeBitter').className = "p-3 rounded-xl bg-slate-900 border-2 border-slate-700 cursor-pointer transition";
             document.getElementById('rfModeBitter').querySelector('div').className = "text-white font-bold text-sm";
-            
+
             card.className = "p-3 rounded-xl bg-slate-900 border-2 border-cyan-500 cursor-pointer transition";
             card.querySelector('div').className = "text-cyan-400 font-bold text-sm";
 
@@ -509,13 +510,12 @@
                 currentPool = shuffleArray([...rfQuestions]);
             }
 
-            // Countdown animation before start
             const overlay = document.getElementById('countdownOverlay');
             const numEl = document.getElementById('countdownNumber');
             overlay.classList.remove('hidden');
             let count = 3;
             numEl.textContent = count;
-            
+
             const timer = setInterval(() => {
                 count--;
                 numEl.textContent = count;
@@ -531,44 +531,47 @@
         }
 
         function setupArenaUI() {
+            // 1. MUST BE AT THE TOP: Change screens and clear old intervals FIRST
+            showScreen('gameScreen'); 
+
             score = 0; p1Score = 0; p2Score = 0; p1Streak = 0; p2Streak = 0; currentTurn = 1; currentIndex = 0;
             matchHistory = []; 
-            
+
             document.getElementById('activeRoundBadge').textContent = activeRound;
             document.getElementById('soloScoreArea').style.display = isJudgeMode ? 'none' : 'block';
             document.getElementById('judgeScoreboard').style.display = isJudgeMode ? 'grid' : 'none';
             document.getElementById('soloInputArea').style.display = isJudgeMode ? 'none' : 'block';
             document.getElementById('judgeControlsArea').style.display = isJudgeMode ? 'flex' : 'none';
-            
+
             if (isRapidFireActive) {
                 document.getElementById('globalTimerWrapper').style.display = 'none'; 
             } else {
                 document.getElementById('globalTimerWrapper').style.display = 'flex';
-                startGlobalTimer();
+                // 2. Now start the global timer safely
+                startGlobalTimer(); 
             }
 
             document.getElementById('scoreDisplay').textContent = score;
             updateJudgeScoreboardUI();
-            
-            showScreen('gameScreen');
+
             loadNextQuestion();
         }
 
         // --- THROTTLING-PROOF TIMESTAMP GLOBAL TIMER ---
         function startGlobalTimer() {
             clearInterval(globalTimerInterval);
-            
+
             const durationMs = globalTime * 1000;
             const endTime = Date.now() + durationMs;
-            
+
             document.getElementById('globalTimerDisplay').textContent = `${globalTime}s`;
-            
+
             globalTimerInterval = setInterval(() => {
                 const remainingMs = endTime - Date.now();
                 const remainingSecs = Math.max(0, Math.ceil(remainingMs / 1000));
-                
+
                 document.getElementById('globalTimerDisplay').textContent = `${remainingSecs}s`;
-                
+
                 if (remainingMs <= 0) {
                     clearInterval(globalTimerInterval);
                     endRound();
@@ -577,6 +580,8 @@
         }
 
         function loadNextQuestion() {
+            isProcessingAnswer = false; // Reset lock for the new question
+            
             if (currentIndex >= currentPool.length) {
                 if (isRapidFireActive && rfMode === 'bitterEnd' && currentPool.some(q => !q.cleared)) {
                     currentPool = currentPool.filter(q => !q.cleared);
@@ -587,7 +592,7 @@
                 }
             }
             const q = currentPool[currentIndex];
-            
+
             document.getElementById('currentQuestionText').textContent = q.q;
             document.getElementById('activeTimerContainer').style.display = 'block';
 
@@ -628,15 +633,18 @@
         function startQuestionInterval() {
             clearInterval(qTimerInterval);
             updateTimerBarUI();
-            
+
             qTimerInterval = setInterval(() => {
                 qTimeLeft -= 0.1;
                 updateTimerBarUI();
-                
-                if (qTimeLeft <= 0) {
+
+                if (qTimeLeft <= 0.05) {
+                    if (isProcessingAnswer) return; // Prevent timeout triggering exactly when answering
+                    isProcessingAnswer = true; // Lock it
+                    
                     clearInterval(qTimerInterval);
                     const currentQ = currentPool[currentIndex];
-                    
+
                     if (isRapidFireActive) {
                         score -= 10; 
                         document.getElementById('scoreDisplay').textContent = score;
@@ -684,7 +692,7 @@
             document.getElementById('preBuzzSection').classList.add('hidden');
             document.getElementById('answerSection').classList.remove('hidden');
             document.getElementById('answerInput').focus();
-            
+
             clearInterval(qTimerInterval);
             startQuestionInterval();
         }
@@ -714,14 +722,16 @@
         }
 
         function submitSoloAnswer() {
+            if (isProcessingAnswer) return; // Prevent double submission
             const userAns = document.getElementById('answerInput').value.trim();
             if(!userAns) return; 
-            
+
+            isProcessingAnswer = true; // Lock it
             clearInterval(qTimerInterval);
             const currentQ = currentPool[currentIndex];
             const correctAns = currentQ.a;
             const isCorrect = isCloseEnough(userAns, correctAns);
-            
+
             if (rfMode === 'bitterEnd' && isRapidFireActive) {
                 currentQ.cleared = isCorrect;
             }
@@ -739,7 +749,7 @@
                 score -= 10;
                 flashFeedback(false, `Wrong (-10). Ans: ${correctAns}`);
             }
-            
+
             document.getElementById('scoreDisplay').textContent = score;
             document.getElementById('answerInput').value = '';
             setTimeout(() => { currentIndex++; loadNextQuestion(); }, 1000);
@@ -753,6 +763,9 @@
         }
 
         function scoreJudgeMode(isCorrect, isTimeout = false) {
+            if (isProcessingAnswer) return; // Prevent double clicking
+            isProcessingAnswer = true; // Lock it
+            
             clearInterval(qTimerInterval);
             const currentQ = currentPool[currentIndex];
 
@@ -781,7 +794,7 @@
             document.getElementById('p2Score').textContent = p2Score;
             document.getElementById('p1StreakText').textContent = p1Streak;
             document.getElementById('p2StreakText').textContent = p2Streak;
-            
+
             if (currentTurn === 1) {
                 document.getElementById('p1Panel').classList.add('active-turn-p1'); 
                 document.getElementById('p2Panel').classList.remove('active-turn-p2');
@@ -807,7 +820,7 @@
             matchHistory.forEach((item, index) => {
                 const card = document.createElement('div');
                 card.className = `p-4 rounded-xl border ${item.correct ? 'bg-green-950/30 border-green-500/40' : 'bg-red-950/35 border-red-500/40'}`;
-                
+
                 card.innerHTML = `
                     <div class="flex justify-between items-start mb-1.5">
                         <span class="text-[10px] font-extrabold px-2.5 py-0.5 rounded uppercase tracking-wider ${item.correct ? 'bg-green-500 text-slate-950' : 'bg-red-500 text-white'}">
@@ -828,7 +841,7 @@
         function endRound() {
             clearInterval(globalTimerInterval); clearInterval(qTimerInterval);
             if(recognition && isMicListening) { isMicListening = false; recognition.stop(); }
-            
+
             showScreen('resultsScreen');
             populateReviewScreen();
 
