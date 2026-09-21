@@ -433,6 +433,24 @@
             return newArr;
         }
 
+        // --- NEW LEVENSHTEIN DISTANCE FOR FUZZY MATCHING ---
+        // Calculates how many letters are different between two words
+        function levenshteinDistance(a, b) {
+            const matrix = [];
+            for (let i = 0; i <= b.length; i++) { matrix[i] = [i]; }
+            for (let j = 0; j <= a.length; j++) { matrix[0][j] = j; }
+            for (let i = 1; i <= b.length; i++) {
+                for (let j = 1; j <= a.length; j++) {
+                    if (b.charAt(i - 1) === a.charAt(j - 1)) {
+                        matrix[i][j] = matrix[i - 1][j - 1];
+                    } else {
+                        matrix[i][j] = Math.min(matrix[i - 1][j - 1] + 1, Math.min(matrix[i][j - 1] + 1, matrix[i - 1][j] + 1));
+                    }
+                }
+            }
+            return matrix[b.length][a.length];
+        }
+
         function startQuickBuzz() {
             if (allQuestions.length === 0) return alert("Database is still loading or failed to connect.");
             activeRound = 'QuickBuzz'; isJudgeMode = false; isRapidFireActive = false; globalTime = 120;
@@ -736,17 +754,37 @@
             }
         });
 
+        // --- UPDATED isCloseEnough FUNCTION (NOW USES FUZZY MATCHING) ---
         function isCloseEnough(userVal, correctVal) {
             if(!userVal || !correctVal) return false;
             let u = userVal.toString().toLowerCase().trim();
             let c = correctVal.toString().toLowerCase().trim();
+            
+            // 1. Exact match
             if (u === c) return true;
+            
+            // 2. Math/Number check (allow a 5% margin of error for math)
             const uNumMatch = u.match(/-?\d+(\.\d+)?/);
             const cNumMatch = c.match(/-?\d+(\.\d+)?/);
             if (uNumMatch && cNumMatch) {
                 if (Math.abs(parseFloat(uNumMatch[0]) - parseFloat(cNumMatch[0])) <= Math.max(0.1, Math.abs(parseFloat(cNumMatch[0]) * 0.05))) return true;
             }
+            
+            // 3. Substring match (e.g. if mic caught "the paris" instead of "paris")
             if (u.length > 3 && c.includes(u)) return true;
+            if (c.length > 3 && u.includes(c)) return true;
+
+            // 4. Fuzzy Matching for accents/mispronunciations (Levenshtein)
+            const distance = levenshteinDistance(u, c);
+            
+            // Allow more mistakes for longer words (approx 40% difference allowed)
+            // Example: "court" is 5 letters. 40% of 5 is 2. It allows 2 wrong letters (matches "cut")
+            const allowedMistakes = Math.floor(c.length * 0.4); 
+            
+            if (distance <= Math.max(1, allowedMistakes)) {
+                return true;
+            }
+
             return false;
         }
 
