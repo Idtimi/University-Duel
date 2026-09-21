@@ -541,7 +541,7 @@
             document.getElementById('judgeControlsArea').style.display = isJudgeMode ? 'flex' : 'none';
             
             if (isRapidFireActive) {
-                document.getElementById('globalTimerWrapper').style.display = 'none'; // Rapid fire relies purely on per-question timer
+                document.getElementById('globalTimerWrapper').style.display = 'none'; 
             } else {
                 document.getElementById('globalTimerWrapper').style.display = 'flex';
                 startGlobalTimer();
@@ -567,7 +567,6 @@
         function loadNextQuestion() {
             if (currentIndex >= currentPool.length) {
                 if (isRapidFireActive && rfMode === 'bitterEnd' && currentPool.some(q => !q.cleared)) {
-                    // Filter down to uncleared questions and loop
                     currentPool = currentPool.filter(q => !q.cleared);
                     currentIndex = 0;
                 } else {
@@ -581,20 +580,27 @@
             document.getElementById('activeTimerContainer').style.display = 'block';
 
             if (isRapidFireActive) {
-                qPhase = 'answer'; qTimeLimit = rfTimeLimit; qTimeLeft = rfTimeLimit;
+                qPhase = 'answer';
+                qTimeLimit = rfTimeLimit; 
+                qTimeLeft = rfTimeLimit;
                 document.getElementById('qTimerLabel').textContent = `${rfTimeLimit === 8 ? 'Easy' : 'Hard'} Sprint`;
                 document.getElementById('preBuzzSection').classList.add('hidden');
                 document.getElementById('answerSection').classList.remove('hidden');
                 document.getElementById('answerInput').value = '';
                 document.getElementById('answerInput').focus();
             } else if (activeRound === 'QuickBuzz') {
-                qPhase = 'read'; qTimeLimit = 8; qTimeLeft = 8; isBuzzed = false;
+                qPhase = 'read';
+                qTimeLimit = 8; 
+                qTimeLeft = 8;
+                isBuzzed = false;
                 document.getElementById('qTimerLabel').textContent = "Read Time";
                 document.getElementById('preBuzzSection').classList.remove('hidden');
                 document.getElementById('answerSection').classList.add('hidden');
                 document.getElementById('answerInput').value = '';
             } else {
-                qPhase = 'brainmatch_run'; qTimeLimit = 7; qTimeLeft = 7;
+                qPhase = 'brainmatch_run';
+                qTimeLimit = 7; 
+                qTimeLeft = 7;
                 document.getElementById('qTimerLabel').textContent = "Answer Window";
 
                 if (!isJudgeMode) {
@@ -610,14 +616,18 @@
         function startQuestionInterval() {
             clearInterval(qTimerInterval);
             updateTimerBarUI();
+            
             qTimerInterval = setInterval(() => {
                 qTimeLeft -= 0.1;
                 updateTimerBarUI();
+                
                 if (qTimeLeft <= 0) {
                     clearInterval(qTimerInterval);
                     const currentQ = currentPool[currentIndex];
+                    
                     if (isRapidFireActive) {
-                        score -= 10; document.getElementById('scoreDisplay').textContent = score;
+                        score -= 10; 
+                        document.getElementById('scoreDisplay').textContent = score;
                         if (rfMode === 'bitterEnd') currentQ.cleared = false;
                         matchHistory.push({ q: currentQ.q, correctAnswer: currentQ.a, userAnswer: "Time Expired", correct: false });
                         flashFeedback(false, `Time's Up! (Ans: ${currentQ.a})`);
@@ -627,7 +637,8 @@
                         flashFeedback(false, `Time Expired! (Ans: ${currentQ.a})`);
                         setTimeout(() => { currentIndex++; loadNextQuestion(); }, 1500);
                     } else if (qPhase === 'answer') {
-                        score -= 10; document.getElementById('scoreDisplay').textContent = score;
+                        score -= 10; 
+                        document.getElementById('scoreDisplay').textContent = score;
                         matchHistory.push({ q: currentQ.q, correctAnswer: currentQ.a, userAnswer: "Time Expired", correct: false });
                         flashFeedback(false, `-10 Penalty! Time Expired (Ans: ${currentQ.a})`);
                         setTimeout(() => { currentIndex++; loadNextQuestion(); }, 1500);
