@@ -714,7 +714,7 @@
                             flashFeedback(false, `Time's Up! Turn Passed.`);
                             
                             // EXPLICITLY CALL SCORE FUNCTION BYPASSING THE LOCK
-                            isProcessingAnswer = false; // Temporarily unlock so scoreJudgeMode can run
+                            isProcessingAnswer = false; 
                             scoreJudgeMode(false, true); 
                         } else {
                             matchHistory.push({ q: currentQ.q, correctAnswer: currentQ.a, userAnswer: "Time Expired", correct: false });
@@ -865,11 +865,8 @@
             
             updateJudgeScoreboardUI();
             
-            // If it was a timeout, the timeout block already has a setTimeout to load the next question.
-            // Only trigger a new setTimeout if it was a manual click.
-            if (!isTimeout) {
-                setTimeout(() => { currentIndex++; loadNextQuestion(); }, 1000);
-            }
+            // ALWAYS execute this setTimeout, regardless of manual click or timeout
+            setTimeout(() => { currentIndex++; loadNextQuestion(); }, 1200);
         }
 
         function updateJudgeScoreboardUI() {
