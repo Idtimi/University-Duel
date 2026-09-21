@@ -554,20 +554,26 @@
             loadNextQuestion();
         }
 
+        // --- THROTTLING-PROOF TIMESTAMP GLOBAL TIMER ---
         function startGlobalTimer() {
             clearInterval(globalTimerInterval);
+            
+            const durationMs = globalTime * 1000;
+            const endTime = Date.now() + durationMs;
+            
             document.getElementById('globalTimerDisplay').textContent = `${globalTime}s`;
             
             globalTimerInterval = setInterval(() => {
-                if (globalTime > 0) {
-                    globalTime--;
-                    document.getElementById('globalTimerDisplay').textContent = `${globalTime}s`;
-                }
-                if (globalTime <= 0) {
+                const remainingMs = endTime - Date.now();
+                const remainingSecs = Math.max(0, Math.ceil(remainingMs / 1000));
+                
+                document.getElementById('globalTimerDisplay').textContent = `${remainingSecs}s`;
+                
+                if (remainingMs <= 0) {
                     clearInterval(globalTimerInterval);
                     endRound();
                 }
-            }, 1000);
+            }, 250);
         }
 
         function loadNextQuestion() {
