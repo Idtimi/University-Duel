@@ -8,10 +8,10 @@ export default async function handler(req, res) {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     try {
-        const { data, error } = await supabase.from('questions').select('*');
+        // Fetch up to 15,000 rows to support your massive question bank
+        const { data, error } = await supabase.from('questions').select('*').range(0, 15000);
         if (error) throw error;
         
-        // This forces whatever the database returns into the exact format your frontend needs
         const formattedData = data.map(row => ({
             round: row.round || row.Round || "",
             category: row.category || row.Category || "",
@@ -20,7 +20,7 @@ export default async function handler(req, res) {
             options: row.options || row.Options ? (row.options || row.Options) : []
         }));
         
-        // Force Vercel to bypass cache so you see this update instantly
+        // Force Vercel to bypass cache so updates appear instantly
         res.setHeader('Cache-Control', 'no-store, max-age=0');
         res.status(200).json(formattedData);
     } catch (error) {
