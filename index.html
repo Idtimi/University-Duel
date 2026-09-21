@@ -309,6 +309,8 @@
         let activeRound = '', activeCategory = '', isJudgeMode = false, isBuzzed = false;
         let matchHistory = [];
         let isProcessingAnswer = false;
+        
+        let overlayCountdownTimer = null;
 
         // Rapid Fire Custom Creator State
         let rfQuestions = [];
@@ -390,20 +392,54 @@
         }
 
         function showScreen(id) {
-            clearInterval(globalTimerInterval); clearInterval(qTimerInterval);
+            clearInterval(globalTimerInterval); clearInterval(qTimerInterval); clearInterval(overlayCountdownTimer);
+            document.getElementById('countdownOverlay').classList.add('hidden');
+            
             if(recognition && isMicListening) { isMicListening = false; recognition.stop(); }
             ['homeScreen', 'brainMatchCategoryScreen', 'rfUploadScreen', 'judgePreviewScreen', 'gameScreen', 'resultsScreen'].forEach(s => document.getElementById(s).classList.add('hidden'));
             document.getElementById(id).classList.remove('hidden');
         }
 
-        function shuffleArray(arr) { return [...arr].sort(() => Math.random() - 0.5); }
+        // --- UNIVERSAL COUNTDOWN SYSTEM ---
+        function startCountdown(seconds, callback) {
+            clearInterval(overlayCountdownTimer);
+            const overlay = document.getElementById('countdownOverlay');
+            const numEl = document.getElementById('countdownNumber');
+            
+            overlay.classList.remove('hidden');
+            let count = seconds;
+            numEl.textContent = count;
+
+            overlayCountdownTimer = setInterval(() => {
+                count--;
+                if (count > 0) {
+                    numEl.textContent = count;
+                } else {
+                    clearInterval(overlayCountdownTimer);
+                    overlay.classList.add('hidden');
+                    if(callback) callback();
+                }
+            }, 1000);
+        }
+
+        // --- UPDATED FISHER-YATES SHUFFLE FOR TRUE RANDOMNESS ---
+        function shuffleArray(arr) {
+            const newArr = [...arr]; // Create a copy so we don't mess up the original database
+            for (let i = newArr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                // Swap elements
+                [newArr[i], newArr[j]] = [newArr[j], newArr[i]];
+            }
+            return newArr;
+        }
 
         function startQuickBuzz() {
             if (allQuestions.length === 0) return alert("Database is still loading or failed to connect.");
             activeRound = 'QuickBuzz'; isJudgeMode = false; isRapidFireActive = false; globalTime = 120;
             currentPool = shuffleArray(allQuestions.filter(q => q.round === 'QuickBuzz'));
             if (!currentPool.length) currentPool = shuffleArray([...allQuestions]);
-            setupArenaUI();
+            
+            startCountdown(5, setupArenaUI);
         }
 
         let tempJudgeFlag = false;
@@ -418,8 +454,11 @@
             currentPool = shuffleArray(allQuestions.filter(q => q.round === 'BrainMatch' && q.category === cat));
             if (!currentPool.length) currentPool = shuffleArray(allQuestions);
 
-            if (isJudgeMode) showJudgePreview();
-            else setupArenaUI();
+            if (isJudgeMode) {
+                showJudgePreview();
+            } else {
+                startCountdown(5, setupArenaUI);
+            }
         }
 
         function showJudgePreview() {
@@ -431,7 +470,10 @@
             showScreen('judgePreviewScreen');
         }
 
-        function startBrainMatchMode() { setupArenaUI(); }
+        function startBrainMatchMode() { 
+            // 30 Second Countdown for Judge Mode
+            startCountdown(30, setupArenaUI);
+        }
 
         // --- RAPID FIRE CSV CREATOR LOGIC ---
         function setupRfUploadListener() {
@@ -510,24 +552,12 @@
                 currentPool = shuffleArray([...rfQuestions]);
             }
 
-            const overlay = document.getElementById('countdownOverlay');
-            const numEl = document.getElementById('countdownNumber');
-            overlay.classList.remove('hidden');
-            let count = 3;
-            numEl.textContent = count;
-
-            const timer = setInterval(() => {
-                count--;
-                numEl.textContent = count;
-                if (count <= 0) {
-                    clearInterval(timer);
-                    overlay.classList.add('hidden');
-                    activeRound = 'Rapid Fire CSV';
-                    isJudgeMode = false;
-                    isRapidFireActive = true;
-                    setupArenaUI();
-                }
-            }, 1000);
+            startCountdown(5, () => {
+                activeRound = 'Rapid Fire CSV';
+                isJudgeMode = false;
+                isRapidFireActive = true;
+                setupArenaUI();
+            });
         }
 
         function setupArenaUI() {
@@ -843,7 +873,7 @@
         }
 
         function endRound() {
-            clearInterval(globalTimerInterval); clearInterval(qTimerInterval);
+            clearInterval(globalTimerInterval); clearInterval(qTimerInterval); clearInterval(overlayCountdownTimer);
             if(recognition && isMicListening) { isMicListening = false; recognition.stop(); }
 
             showScreen('resultsScreen');
