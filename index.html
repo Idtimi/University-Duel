@@ -646,7 +646,6 @@
                     const currentQ = currentPool[currentIndex];
 
                     if (isRapidFireActive) {
-                        score -= 10; 
                         document.getElementById('scoreDisplay').textContent = score;
                         if (rfMode === 'bitterEnd') currentQ.cleared = false;
                         matchHistory.push({ q: currentQ.q, correctAnswer: currentQ.a, userAnswer: "Time Expired", correct: false });
@@ -744,10 +743,15 @@
             });
 
             if (isCorrect) {
-                score += 10; flashFeedback(true, `Correct! +10 Points`);
+                score += 10; 
+                flashFeedback(true, `Correct! +10 Points`);
             } else {
-                score -= 10;
-                flashFeedback(false, `Wrong (-10). Ans: ${correctAns}`);
+                if (activeRound === 'BrainMatch' || isRapidFireActive) {
+                    flashFeedback(false, `Wrong. Ans: ${correctAns}`);
+                } else {
+                    score -= 10;
+                    flashFeedback(false, `Wrong (-10). Ans: ${correctAns}`);
+                }
             }
 
             document.getElementById('scoreDisplay').textContent = score;
