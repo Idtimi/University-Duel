@@ -434,7 +434,6 @@
         }
 
         // --- NEW LEVENSHTEIN DISTANCE FOR FUZZY MATCHING ---
-        // Calculates how many letters are different between two words
         function levenshteinDistance(a, b) {
             const matrix = [];
             for (let i = 0; i <= b.length; i++) { matrix[i] = [i]; }
@@ -713,6 +712,9 @@
                         if (isJudgeMode) {
                             matchHistory.push({ q: currentQ.q, correctAnswer: currentQ.a, userAnswer: `Player ${currentTurn} Timed Out`, correct: false });
                             flashFeedback(false, `Time's Up! Turn Passed.`);
+                            
+                            // EXPLICITLY CALL SCORE FUNCTION BYPASSING THE LOCK
+                            isProcessingAnswer = false; // Temporarily unlock so scoreJudgeMode can run
                             scoreJudgeMode(false, true); 
                         } else {
                             matchHistory.push({ q: currentQ.q, correctAnswer: currentQ.a, userAnswer: "Time Expired", correct: false });
@@ -841,12 +843,15 @@
             clearInterval(qTimerInterval);
             const currentQ = currentPool[currentIndex];
 
-            matchHistory.push({
-                q: currentQ.q,
-                correctAnswer: currentQ.a,
-                userAnswer: `Player ${currentTurn} Answer (${isCorrect ? 'Correct' : 'Incorrect'})`,
-                correct: isCorrect
-            });
+            // Don't push double history if it was already pushed by the timeout block
+            if (!isTimeout) {
+                matchHistory.push({
+                    q: currentQ.q,
+                    correctAnswer: currentQ.a,
+                    userAnswer: `Player ${currentTurn} Answer (${isCorrect ? 'Correct' : 'Incorrect'})`,
+                    correct: isCorrect
+                });
+            }
 
             if (isCorrect) {
                 if (currentTurn === 1) { p1Streak++; p1Score += getStreakPoints(p1Streak); } 
@@ -857,8 +862,14 @@
                 else { p2Streak = 0; currentTurn = 1; }
                 if(!isTimeout) flashFeedback(false, `Incorrect. Turn Passed!`);
             }
+            
             updateJudgeScoreboardUI();
-            setTimeout(() => { currentIndex++; loadNextQuestion(); }, 1000);
+            
+            // If it was a timeout, the timeout block already has a setTimeout to load the next question.
+            // Only trigger a new setTimeout if it was a manual click.
+            if (!isTimeout) {
+                setTimeout(() => { currentIndex++; loadNextQuestion(); }, 1000);
+            }
         }
 
         function updateJudgeScoreboardUI() {
