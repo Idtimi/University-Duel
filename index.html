@@ -234,9 +234,9 @@
             <!-- Question Area -->
             <div class="bg-slate-900/90 rounded-2xl p-6 my-4 border border-slate-800 min-h-[160px] flex flex-col justify-center text-center">
                 <!-- Visual Options List (Unclickable) -->
-                <div id="questionOptionsList" class="flex flex-wrap justify-center gap-3 mb-4 empty:hidden"></div>
+                <div id="questionOptionsList" class="flex flex-wrap justify-center gap-4 mb-6 empty:hidden w-full max-w-3xl mx-auto"></div>
                 <!-- The Question itself -->
-                <h3 id="currentQuestionText" class="text-xl md:text-2xl font-semibold text-white">Loading...</h3>
+                <h3 id="currentQuestionText" class="text-xl md:text-2xl font-semibold text-white leading-snug">Loading...</h3>
             </div>
 
             <!-- Interaction Area: Solo & Rapid Fire -->
@@ -634,17 +634,15 @@
             
             const q = currentPool[currentIndex];
 
-            // Render Options (if they exist) Unclickable visual list
+            // Render Options (if they exist) with bold TV-show styling
             const optionsContainer = document.getElementById('questionOptionsList');
-            optionsContainer.innerHTML = ''; // Clear previous options
+            optionsContainer.innerHTML = ''; 
             
             if (q.options) {
                 let optsArray = [];
-                // Check if it's already an array from Supabase
                 if (Array.isArray(q.options) && q.options.length > 0) {
                     optsArray = q.options;
                 } 
-                // Or if it's a string from CSV / old db format
                 else if (typeof q.options === 'string' && q.options.trim().length > 0) {
                     try { 
                         optsArray = JSON.parse(q.options); 
@@ -653,9 +651,8 @@
                     }
                 }
                 
-                // Display the badges
                 if (optsArray.length > 0) {
-                    optionsContainer.innerHTML = optsArray.map(opt => `<span class="bg-slate-800 border border-slate-700 text-cyan-300 px-4 py-1.5 rounded-lg text-sm font-semibold shadow-md">${opt}</span>`).join('');
+                    optionsContainer.innerHTML = optsArray.map(opt => `<span class="bg-slate-900 border-2 border-slate-700 text-cyan-300 px-6 py-3 rounded-xl text-base md:text-lg font-bold shadow-lg break-words text-center">${opt}</span>`).join('');
                 }
             }
 
@@ -872,9 +869,7 @@
             
             updateJudgeScoreboardUI();
             
-            if (!isTimeout) {
-                setTimeout(() => { currentIndex++; loadNextQuestion(); }, 1000);
-            }
+            setTimeout(() => { currentIndex++; loadNextQuestion(); }, 1200);
         }
 
         function updateJudgeScoreboardUI() {
