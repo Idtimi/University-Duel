@@ -233,6 +233,9 @@
 
             <!-- Question Area -->
             <div class="bg-slate-900/90 rounded-2xl p-6 my-4 border border-slate-800 min-h-[160px] flex flex-col justify-center text-center">
+                <!-- Visual Options List (Unclickable) -->
+                <div id="questionOptionsList" class="flex flex-wrap justify-center gap-3 mb-4 empty:hidden"></div>
+                <!-- The Question itself -->
                 <h3 id="currentQuestionText" class="text-xl md:text-2xl font-semibold text-white">Loading...</h3>
             </div>
 
@@ -334,8 +337,8 @@
                 allQuestions = [
                     { round: "QuickBuzz", category: "STEM", q: "A 2M solution is diluted from 250mL to 1L. What is the new concentration?", a: "0.5M" },
                     { round: "QuickBuzz", category: "General", q: "Which Malian singer is known as the Golden Voice of Africa?", a: "Salif Keita" },
-                    { round: "BrainMatch", category: "Applied Math", q: "A spring-mass system follows d²x/dt² + 9x = 0. What is the period?", a: "2.09s" },
-                    { round: "BrainMatch", category: "Data Analysis", q: "What is the probability of rolling a 4 on a standard die?", a: "1/6" }
+                    { round: "BrainMatch", category: "Applied Math", q: "A spring-mass system follows d²x/dt² + 9x = 0. What is the period?", a: "2.09s", options: ["1.05s", "2.09s", "3.14s"] },
+                    { round: "BrainMatch", category: "Data Analysis", q: "What is the probability of rolling a 4 on a standard die?", a: "1/6", options: "1/2, 1/4, 1/6, 1/8" }
                 ];
                 document.getElementById('uploadStatus').innerHTML = `<span class="text-rose-400 font-bold"><i class="fas fa-exclamation-triangle"></i> Database connection failed. Loaded fallback questions.</span>`;
                 document.getElementById('loadedQCount').textContent = allQuestions.length;
@@ -422,18 +425,15 @@
             }, 1000);
         }
 
-        // --- UPDATED FISHER-YATES SHUFFLE FOR TRUE RANDOMNESS ---
         function shuffleArray(arr) {
-            const newArr = [...arr]; // Create a copy so we don't mess up the original database
+            const newArr = [...arr]; 
             for (let i = newArr.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
-                // Swap elements
                 [newArr[i], newArr[j]] = [newArr[j], newArr[i]];
             }
             return newArr;
         }
 
-        // --- NEW LEVENSHTEIN DISTANCE FOR FUZZY MATCHING ---
         function levenshteinDistance(a, b) {
             const matrix = [];
             for (let i = 0; i <= b.length; i++) { matrix[i] = [i]; }
@@ -488,11 +488,9 @@
         }
 
         function startBrainMatchMode() { 
-            // 30 Second Countdown for Judge Mode
             startCountdown(30, setupArenaUI);
         }
 
-        // --- RAPID FIRE CSV CREATOR LOGIC ---
         function setupRfUploadListener() {
             const fileInput = document.getElementById('rfCsvFile');
             fileInput.addEventListener('change', (e) => {
@@ -578,7 +576,6 @@
         }
 
         function setupArenaUI() {
-            // 1. MUST BE AT THE TOP: Change screens and clear old intervals FIRST
             showScreen('gameScreen'); 
 
             score = 0; p1Score = 0; p2Score = 0; p1Streak = 0; p2Streak = 0; currentTurn = 1; currentIndex = 0;
@@ -594,7 +591,6 @@
                 document.getElementById('globalTimerWrapper').style.display = 'none'; 
             } else {
                 document.getElementById('globalTimerWrapper').style.display = 'flex';
-                // 2. Now start the global timer safely
                 startGlobalTimer(); 
             }
 
@@ -604,10 +600,8 @@
             loadNextQuestion();
         }
 
-        // --- THROTTLING-PROOF TIMESTAMP GLOBAL TIMER ---
         function startGlobalTimer() {
             clearInterval(globalTimerInterval);
-
             const durationMs = globalTime * 1000;
             const endTime = Date.now() + durationMs;
 
@@ -616,7 +610,6 @@
             globalTimerInterval = setInterval(() => {
                 const remainingMs = endTime - Date.now();
                 const remainingSecs = Math.max(0, Math.ceil(remainingMs / 1000));
-
                 document.getElementById('globalTimerDisplay').textContent = `${remainingSecs}s`;
 
                 if (remainingMs <= 0) {
@@ -627,7 +620,7 @@
         }
 
         function loadNextQuestion() {
-            isProcessingAnswer = false; // Reset lock for the new question
+            isProcessingAnswer = false; 
             
             if (currentIndex >= currentPool.length) {
                 if (isRapidFireActive && rfMode === 'bitterEnd' && currentPool.some(q => !q.cleared)) {
@@ -638,7 +631,33 @@
                     return;
                 }
             }
+            
             const q = currentPool[currentIndex];
+
+            // Render Options (if they exist) Unclickable visual list
+            const optionsContainer = document.getElementById('questionOptionsList');
+            optionsContainer.innerHTML = ''; // Clear previous options
+            
+            if (q.options) {
+                let optsArray = [];
+                // Check if it's already an array from Supabase
+                if (Array.isArray(q.options) && q.options.length > 0) {
+                    optsArray = q.options;
+                } 
+                // Or if it's a string from CSV / old db format
+                else if (typeof q.options === 'string' && q.options.trim().length > 0) {
+                    try { 
+                        optsArray = JSON.parse(q.options); 
+                    } catch(e) { 
+                        optsArray = q.options.split(',').map(s => s.trim()); 
+                    }
+                }
+                
+                // Display the badges
+                if (optsArray.length > 0) {
+                    optionsContainer.innerHTML = optsArray.map(opt => `<span class="bg-slate-800 border border-slate-700 text-cyan-300 px-4 py-1.5 rounded-lg text-sm font-semibold shadow-md">${opt}</span>`).join('');
+                }
+            }
 
             document.getElementById('currentQuestionText').textContent = q.q;
             document.getElementById('activeTimerContainer').style.display = 'block';
@@ -686,8 +705,8 @@
                 updateTimerBarUI();
 
                 if (qTimeLeft <= 0.05) {
-                    if (isProcessingAnswer) return; // Prevent timeout triggering exactly when answering
-                    isProcessingAnswer = true; // Lock it
+                    if (isProcessingAnswer) return; 
+                    isProcessingAnswer = true; 
                     
                     clearInterval(qTimerInterval);
                     const currentQ = currentPool[currentIndex];
@@ -713,7 +732,6 @@
                             matchHistory.push({ q: currentQ.q, correctAnswer: currentQ.a, userAnswer: `Player ${currentTurn} Timed Out`, correct: false });
                             flashFeedback(false, `Time's Up! Turn Passed.`);
                             
-                            // EXPLICITLY CALL SCORE FUNCTION BYPASSING THE LOCK
                             isProcessingAnswer = false; 
                             scoreJudgeMode(false, true); 
                         } else {
@@ -756,46 +774,36 @@
             }
         });
 
-        // --- UPDATED isCloseEnough FUNCTION (NOW USES FUZZY MATCHING) ---
         function isCloseEnough(userVal, correctVal) {
             if(!userVal || !correctVal) return false;
             let u = userVal.toString().toLowerCase().trim();
             let c = correctVal.toString().toLowerCase().trim();
             
-            // 1. Exact match
             if (u === c) return true;
             
-            // 2. Math/Number check (allow a 5% margin of error for math)
             const uNumMatch = u.match(/-?\d+(\.\d+)?/);
             const cNumMatch = c.match(/-?\d+(\.\d+)?/);
             if (uNumMatch && cNumMatch) {
                 if (Math.abs(parseFloat(uNumMatch[0]) - parseFloat(cNumMatch[0])) <= Math.max(0.1, Math.abs(parseFloat(cNumMatch[0]) * 0.05))) return true;
             }
             
-            // 3. Substring match (e.g. if mic caught "the paris" instead of "paris")
             if (u.length > 3 && c.includes(u)) return true;
             if (c.length > 3 && u.includes(c)) return true;
 
-            // 4. Fuzzy Matching for accents/mispronunciations (Levenshtein)
             const distance = levenshteinDistance(u, c);
-            
-            // Allow more mistakes for longer words (approx 40% difference allowed)
-            // Example: "court" is 5 letters. 40% of 5 is 2. It allows 2 wrong letters (matches "cut")
             const allowedMistakes = Math.floor(c.length * 0.4); 
             
-            if (distance <= Math.max(1, allowedMistakes)) {
-                return true;
-            }
+            if (distance <= Math.max(1, allowedMistakes)) { return true; }
 
             return false;
         }
 
         function submitSoloAnswer() {
-            if (isProcessingAnswer) return; // Prevent double submission
+            if (isProcessingAnswer) return; 
             const userAns = document.getElementById('answerInput').value.trim();
             if(!userAns) return; 
 
-            isProcessingAnswer = true; // Lock it
+            isProcessingAnswer = true; 
             clearInterval(qTimerInterval);
             const currentQ = currentPool[currentIndex];
             const correctAns = currentQ.a;
@@ -837,13 +845,12 @@
         }
 
         function scoreJudgeMode(isCorrect, isTimeout = false) {
-            if (isProcessingAnswer) return; // Prevent double clicking
-            isProcessingAnswer = true; // Lock it
+            if (isProcessingAnswer) return; 
+            isProcessingAnswer = true; 
             
             clearInterval(qTimerInterval);
             const currentQ = currentPool[currentIndex];
 
-            // Don't push double history if it was already pushed by the timeout block
             if (!isTimeout) {
                 matchHistory.push({
                     q: currentQ.q,
@@ -865,8 +872,9 @@
             
             updateJudgeScoreboardUI();
             
-            // ALWAYS execute this setTimeout, regardless of manual click or timeout
-            setTimeout(() => { currentIndex++; loadNextQuestion(); }, 1200);
+            if (!isTimeout) {
+                setTimeout(() => { currentIndex++; loadNextQuestion(); }, 1000);
+            }
         }
 
         function updateJudgeScoreboardUI() {
@@ -885,6 +893,7 @@
         }
 
         function flashFeedback(isGood, msg) {
+            document.getElementById('questionOptionsList').innerHTML = ''; // Hide options during feedback
             document.getElementById('currentQuestionText').innerHTML = `<span class="${isGood ? 'text-emerald-400' : 'text-rose-400'} font-bold">${msg}</span>`;
         }
 
