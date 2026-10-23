@@ -9,7 +9,7 @@ export default async function handler(req, res) {
 
     try {
         // Fetch up to 15,000 rows to support your massive question bank
-        const { data, error } = await supabase.from('questions').select('*').range(0, 15000);
+        const { data, error } = await supabase.from('questions').select('*').range(0, 25000);
         if (error) throw error;
         
         const formattedData = data.map(row => ({
